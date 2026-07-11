@@ -589,7 +589,7 @@
       font-size: 13px;
       font-weight: 760;
     }
-    .semantic-id-tokens {
+    .semantic-id-components {
       margin-top: 4px;
       color: var(--muted);
       font-size: 11px;
@@ -940,7 +940,12 @@
     function resultDetail(name, description, skillId) {
       const semanticId = semanticIdData(skillId);
       const vector = semanticId?.values?.length ? `[${semanticId.values.join(", ")}]` : "N/A";
-      const tokens = semanticId?.tokens?.length ? semanticId.tokens.join(" ") : "";
+      const components = semanticId?.values?.length
+        ? [
+            ...semanticId.values.slice(0, -1).map((value, index) => `RQ${index}=${value}`),
+            `dedup=${semanticId.values[semanticId.values.length - 1]}`
+          ].join(" &middot; ")
+        : "";
       return `
         <div class="result-detail">
           <div class="detail-grid">
@@ -951,7 +956,7 @@
             <div class="detail-label">SemID</div>
             <div class="detail-value semantic-id-value">
               <div class="semantic-id-vector">${escapeHtml(vector)}</div>
-              ${tokens ? `<div class="semantic-id-tokens">${escapeHtml(tokens)}</div>` : ""}
+              ${components ? `<div class="semantic-id-components">${components}</div>` : ""}
             </div>
           </div>
         </div>`;
