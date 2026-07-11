@@ -331,12 +331,42 @@
       font-weight: 820;
     }
     .formula-definitions {
-      margin-top: 6px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 12px;
+      margin-top: 10px;
+    }
+    .formula-item {
+      min-width: 0;
+      padding: 9px 11px 10px;
+      border-left: 3px solid #c9dff3;
+      background: #f8fafc;
+    }
+    .formula-label {
       color: var(--muted);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .formula-expression {
+      max-width: 100%;
+      margin-top: 4px;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .formula-math, .metric-math {
+      color: #273142;
+      font-family: "STIX Two Math", "Cambria Math", "Times New Roman", serif;
+    }
+    .formula-math {
+      font-size: 16px;
+    }
+    .formula-math + .formula-math { margin-top: 4px; }
+    .formula-note {
+      margin-top: 9px;
+      color: #445166;
       font-size: 11px;
-      line-height: 1.6;
-      overflow-wrap: anywhere;
+      font-weight: 650;
     }
     .metric-scope + .metric-scope { border-top: 1px solid var(--line); }
     .metric-scope-head {
@@ -388,9 +418,16 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
     .metric-equation {
+      min-height: 24px;
+      display: flex;
+      align-items: center;
       color: #374151;
       font-size: 12px;
       font-weight: 760;
+      white-space: nowrap;
+    }
+    .metric-math {
+      font-size: 14px;
       white-space: nowrap;
     }
     .metric-value {
@@ -571,6 +608,7 @@
       .query-meta { align-items: flex-start; flex-direction: column; }
       .query-tags { justify-content: flex-start; }
       .query-text { font-size: 15px; }
+      .formula-definitions { grid-template-columns: 1fr; }
       .metric-scope-head { align-items: flex-start; flex-direction: column; }
       .results-toolbar, .results-head { align-items: flex-start; flex-direction: column; }
       .result-mode-buttons button { min-width: 0; }
@@ -757,8 +795,14 @@
       const headers = DATA.summary.cutoffs.map((cutoff) => `<div class="metric-th">@${cutoff}</div>`).join("");
       const hitCells = metrics.map((metric) => {
         const equation = isQuery
-          ? `1[${metric.hit_count} &gt; 0] = ${metric.hit}`
-          : `${metric.hit_queries} / ${metric.query_count} = ${Number(metric.hit).toFixed(3)}`;
+          ? `<math class="metric-math" aria-label="one if ${metric.hit_count} is greater than zero equals ${metric.hit}">
+               <mn>1</mn><mo>[</mo><mn>${metric.hit_count}</mn><mo>&gt;</mo><mn>0</mn><mo>]</mo>
+               <mo>=</mo><mn>${metric.hit}</mn>
+             </math>`
+          : `<math class="metric-math" aria-label="${metric.hit_queries} divided by ${metric.query_count} equals ${Number(metric.hit).toFixed(3)}">
+               <mfrac><mn>${metric.hit_queries}</mn><mn>${metric.query_count}</mn></mfrac>
+               <mo>=</mo><mn>${Number(metric.hit).toFixed(3)}</mn>
+             </math>`;
         return `
           <div class="metric-cell">
             <div class="metric-equation">${equation}</div>
@@ -767,8 +811,14 @@
       }).join("");
       const recallCells = metrics.map((metric) => {
         const equation = isQuery
-          ? `${metric.hit_count} / ${metric.gold_count} = ${Number(metric.recall).toFixed(3)}`
-          : `&Sigma; R_q / ${metric.query_count} = ${Number(metric.recall).toFixed(3)}`;
+          ? `<math class="metric-math" aria-label="${metric.hit_count} divided by ${metric.gold_count} equals ${Number(metric.recall).toFixed(3)}">
+               <mfrac><mn>${metric.hit_count}</mn><mn>${metric.gold_count}</mn></mfrac>
+               <mo>=</mo><mn>${Number(metric.recall).toFixed(3)}</mn>
+             </math>`
+          : `<math class="metric-math" aria-label="sum of per-query recalls ${Number(metric.recall_sum).toFixed(3)} divided by ${metric.query_count} equals ${Number(metric.recall).toFixed(3)}">
+               <mfrac><mn>${Number(metric.recall_sum).toFixed(3)}</mn><mn>${metric.query_count}</mn></mfrac>
+               <mo>=</mo><mn>${Number(metric.recall).toFixed(3)}</mn>
+             </math>`;
         return `
           <div class="metric-cell">
             <div class="metric-equation">${equation}</div>
@@ -791,21 +841,68 @@
           <div class="metrics-heading">
             <div class="section-title">Hit and Recall formulas</div>
             <div class="formula-definitions">
-              h_q(k) = |Top-k(q) &cap; GT(q)|; G_q = |GT(q)|.<br>
-              H_k = &Sigma;_q 1[h_q(k) &gt; 0]; Q = number of queries; R_q(k) = h_q(k) / G_q.
+              <div class="formula-item">
+                <div class="formula-label">Retrieved GT count</div>
+                <div class="formula-expression">
+                  <math class="formula-math" display="block" aria-label="h sub q of k equals the size of Top k of q intersect ground truth of q">
+                    <msub><mi>h</mi><mi>q</mi></msub><mo>(</mo><mi>k</mi><mo>)</mo><mo>=</mo>
+                    <mo>|</mo><msub><mtext>Top</mtext><mi>k</mi></msub><mo>(</mo><mi>q</mi><mo>)</mo>
+                    <mo>&cap;</mo><mtext>GT</mtext><mo>(</mo><mi>q</mi><mo>)</mo><mo>|</mo>
+                  </math>
+                  <math class="formula-math" display="block" aria-label="G sub q equals the size of ground truth of q">
+                    <msub><mi>G</mi><mi>q</mi></msub><mo>=</mo><mo>|</mo><mtext>GT</mtext><mo>(</mo><mi>q</mi><mo>)</mo><mo>|</mo>
+                  </math>
+                </div>
+              </div>
+              <div class="formula-item">
+                <div class="formula-label">Per-query metrics</div>
+                <div class="formula-expression">
+                  <math class="formula-math" display="block" aria-label="Hit at k for q is one when h sub q of k is greater than zero">
+                    <mtext>Hit</mtext><mo>@</mo><mi>k</mi><mo>(</mo><mi>q</mi><mo>)</mo><mo>=</mo>
+                    <mn>1</mn><mo>[</mo><msub><mi>h</mi><mi>q</mi></msub><mo>(</mo><mi>k</mi><mo>)</mo><mo>&gt;</mo><mn>0</mn><mo>]</mo>
+                  </math>
+                  <math class="formula-math" display="block" aria-label="R sub q of k equals h sub q of k divided by G sub q">
+                    <msub><mi>R</mi><mi>q</mi></msub><mo>(</mo><mi>k</mi><mo>)</mo><mo>=</mo>
+                    <mfrac><mrow><msub><mi>h</mi><mi>q</mi></msub><mo>(</mo><mi>k</mi><mo>)</mo></mrow><msub><mi>G</mi><mi>q</mi></msub></mfrac>
+                  </math>
+                </div>
+              </div>
+              <div class="formula-item">
+                <div class="formula-label">Run Hit</div>
+                <div class="formula-expression">
+                  <math class="formula-math" display="block" aria-label="Hit at k is one over Q times the sum over queries of the per-query hit indicator">
+                    <mtext>Hit</mtext><mo>@</mo><mi>k</mi><mo>=</mo>
+                    <mfrac><mn>1</mn><mi>Q</mi></mfrac>
+                    <munderover><mo>&sum;</mo><mrow><mi>q</mi><mo>=</mo><mn>1</mn></mrow><mi>Q</mi></munderover>
+                    <mn>1</mn><mo>[</mo><msub><mi>h</mi><mi>q</mi></msub><mo>(</mo><mi>k</mi><mo>)</mo><mo>&gt;</mo><mn>0</mn><mo>]</mo>
+                  </math>
+                </div>
+              </div>
+              <div class="formula-item">
+                <div class="formula-label">Run Recall (macro averaged)</div>
+                <div class="formula-expression">
+                  <math class="formula-math" display="block" aria-label="Recall at k is one over Q times the sum of per-query recall from q equals one to Q">
+                    <mtext>Recall</mtext><mo>@</mo><mi>k</mi><mo>=</mo>
+                    <mfrac><mn>1</mn><mi>Q</mi></mfrac>
+                    <munderover><mo>&sum;</mo><mrow><mi>q</mi><mo>=</mo><mn>1</mn></mrow><mi>Q</mi></munderover>
+                    <msub><mi>R</mi><mi>q</mi></msub><mo>(</mo><mi>k</mi><mo>)</mo>
+                  </math>
+                </div>
+              </div>
             </div>
+            <div class="formula-note">Macro Recall gives every query equal weight, regardless of how many GT skills it has.</div>
           </div>
           <div class="metric-scope">
             <div class="metric-scope-head">
               <div class="metric-scope-title">This query</div>
-              <div class="metric-scope-note">Hit@k(q) = 1[h_q(k) &gt; 0]; Recall@k(q) = h_q(k) / G_q</div>
+              <div class="metric-scope-note">Per-query values before aggregation</div>
             </div>
             ${metricTable("query", query)}
           </div>
           <div class="metric-scope">
             <div class="metric-scope-head">
               <div class="metric-scope-title">Entire run</div>
-              <div class="metric-scope-note">Hit@k = H_k / Q; Recall@k = (1 / Q) &Sigma;_q R_q(k) (macro averaged)</div>
+              <div class="metric-scope-note">Macro averaged across ${DATA.summary.query_count} equally weighted queries</div>
             </div>
             ${metricTable("run", query)}
           </div>
