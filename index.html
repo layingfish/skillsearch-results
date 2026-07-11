@@ -703,7 +703,9 @@
     function semanticIdSearchText(skillId) {
       const semanticId = semanticIdData(skillId);
       if (!semanticId) return "";
-      return [...(semanticId.values || []), ...(semanticId.tokens || [])].join(" ").toLowerCase();
+      const rqValues = (semanticId.values || []).slice(0, -1);
+      const rqTokens = (semanticId.tokens || []).filter((token) => !token.startsWith("<DUP_"));
+      return [...rqValues, ...rqTokens].join(" ").toLowerCase();
     }
 
     function activeRun() {
@@ -939,12 +941,10 @@
 
     function resultDetail(name, description, skillId) {
       const semanticId = semanticIdData(skillId);
-      const vector = semanticId?.values?.length ? `[${semanticId.values.join(", ")}]` : "N/A";
-      const components = semanticId?.values?.length
-        ? [
-            ...semanticId.values.slice(0, -1).map((value, index) => `RQ${index}=${value}`),
-            `dedup=${semanticId.values[semanticId.values.length - 1]}`
-          ].join(" &middot; ")
+      const rqValues = semanticId?.values?.length ? semanticId.values.slice(0, -1) : [];
+      const vector = rqValues.length ? `[${rqValues.join(", ")}]` : "N/A";
+      const components = rqValues.length
+        ? rqValues.map((value, index) => `RQ${index}=${value}`).join(" &middot; ")
         : "";
       return `
         <div class="result-detail">
@@ -953,7 +953,7 @@
             <div class="detail-value">${escapeHtml(name)}</div>
             <div class="detail-label">Description</div>
             <div class="detail-value">${escapeHtml(description || "")}</div>
-            <div class="detail-label">SemID</div>
+            <div class="detail-label">RQ semantic codes</div>
             <div class="detail-value semantic-id-value">
               <div class="semantic-id-vector">${escapeHtml(vector)}</div>
               ${components ? `<div class="semantic-id-components">${components}</div>` : ""}
